@@ -48,6 +48,24 @@ def psi1(k):
         return torch.relu(bar-s_y).sum()/input.shape[0]
     return l
 
+def psi6(k):
+    def l(input, target):
+
+        # sorted, _ = torch.sort(input, descending=True)  # returns tuple with indices, which we dont need
+
+        # def m_loss(u, m):
+        #     return (torch.topk(u, m)[0].sum() - min(m, k))/m
+        m_loss = lambda u, m: (torch.topk(u, m)[0].sum() - min(m, k))/m
+        max_m_loss = lambda u: torch.max(torch.stack([m_loss(u, m) for m in ms]))
+
+        unbatched = torch.unbind(input)
+        ms = np.append(1, range(k, input.shape[1] + 1))
+        maxes = torch.stack([max_m_loss(u) for u in unbatched])
+        u_y = torch.gather(input, 1, target.view(-1,1).to(torch.long)).flatten()
+        losses = maxes + torch.ones_like(maxes) - u_y
+        return losses.sum()/input.shape[0]
+
+    return l
 
 from torch.autograd import Function
 class psi5(Function):
