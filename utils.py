@@ -92,6 +92,21 @@ def generate_gaussians2(N=5, k=3, l=10, M=20, d=None, c=5, f=100):
     test_data, test_labels  = test_list,  np.tile(np.arange(M), tl).reshape(tl, M).T.flatten()
     return train_data, train_labels, test_data, test_labels, mean_probs
 
+
+def generate_dataset(train_samples=100, test_samples=50, n=10, k=2):
+    test_data = np.random.rand(train_samples, n)
+    train_data = np.random.rand(test_samples, n)
+
+    test_topk = np.argsort(test_data, axis=1)[:,-k:]
+    train_topk = np.argsort(train_data, axis=1)[:,-k:]
+
+    # test_labels = test_data.argmax(axis=1)
+    # train_labels = train_data.argmax(axis=1)
+    test_labels = np.array([np.random.choice(test_topk[i]) for i in range(len(test_topk))])
+    train_labels = np.array([np.random.choice(train_topk[i]) for i in range(len(train_topk))])
+
+    return train_data, train_labels, test_data, test_labels
+
 class Dset(tdata.Dataset):
     def __init__(self, data, labels, transform=None):
         self.data = torch.Tensor(data)
@@ -109,6 +124,11 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
     n,d = train_data.shape
     M = np.max(train_labels)+1
     net = nn.Linear(d, M)
+    # net = nn.Sequential(
+    #     nn.Linear(d, 20),
+    #     nn.Sigmoid(),
+    #     nn.Linear(20, M)
+    # )
     optim = torch.optim.Adam(net.parameters(), 0.1)
     train_data = Dset(train_data, train_labels)
     if batch_size==None:
@@ -172,6 +192,11 @@ def repeat_experiment2(NklMdcf, loss_dict, n_trials1, K=None, hidden_size = 64, 
     results = np.zeros((len(loss_dict), 3, n_trials1))
     for i in range(n_trials1):
         train_data, train_labels, test_data, test_labels, means = generate_gaussians2(N,k,l,M,d,c,f)
+        # print(NklMdcf)
+        # print(train_data.shape)
+        # print(train_labels.shape)
+        # print(test_data.shape)
+        train_data, train_labels, test_data, test_labels, means = generate_gaussians2(N,k,l,M,d,c,f)
         perm = np.random.permutation(len(train_data))
         train_data, train_labels = train_data[perm], train_labels[perm]
 
@@ -182,6 +207,37 @@ def repeat_experiment2(NklMdcf, loss_dict, n_trials1, K=None, hidden_size = 64, 
                                                          loss_fn=loss_fn, batch_size=batch_size)
             results[m, :, i] = [loss, acc, topk_acc]
             print(f"Loss: {loss}, acc: {acc}, top-{K} acc: {topk_acc}")
+            print("-------------------------------------------------------------")
+        print("================================================================")
+    print("_____________________________________________________________________")
+    return results
+
+def repeat_experiment3(loss_dict, n_trials1, K=5, N=10, hidden_size = 64, EPOCHS = 100,
+                     batch_size=None):
+    # N,k,l,M,d,c,f=NklMdcf
+    # if K == None:
+    #     K=5
+    # 1st dim: loss type, 2nd dim: statistic type, 3/4 dim: trial1/trial2 number
+    results = np.zeros((len(loss_dict), 3, n_trials1))
+    for i in range(n_trials1):
+        train_data, train_labels, test_data, test_labels = generate_dataset(5000, 1000, 10, K)
+        # print(NklMdcf)
+        # print(train_data.shape)
+        # print(train_labels.shape)
+        # print(test_data.shape)
+        # train_data, train_labels, test_data, test_labels, means = generate_gaussians2(N,k,l,M,d,c,f)
+        perm = np.random.permutation(len(train_data))
+        train_data, train_labels = train_data[perm], train_labels[perm]
+
+        for m, (loss_name, loss_fn) in enumerate(loss_dict.items()):
+            print("loss={}, i={}, k={}".format(loss_name, i, K))
+            net, loss, acc, topk_acc = train_KM_and_evaluate(train_data, train_labels, test_data, 
+                                                         test_labels, K, hidden_size = hidden_size, EPOCHS=EPOCHS, 
+                                                         loss_fn=loss_fn, batch_size=batch_size)
+            results[m, :, i] = [loss, acc, topk_acc]
+            print(f"Loss: {loss}, acc: {acc}, top-{K} acc: {topk_acc}")
+            # for name, param in net.named_parameters():
+            #     print(name, ": ", param)
             print("-------------------------------------------------------------")
         print("================================================================")
     print("_____________________________________________________________________")
