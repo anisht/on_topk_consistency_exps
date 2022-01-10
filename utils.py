@@ -93,17 +93,24 @@ def generate_gaussians2(N=5, k=3, l=10, M=20, d=None, c=5, f=100):
     return train_data, train_labels, test_data, test_labels, mean_probs
 
 
-def generate_dataset(train_samples=100, test_samples=50, n=10, k=2):
-    test_data = np.random.rand(train_samples, n)
-    train_data = np.random.rand(test_samples, n)
+def generate_dataset(train_samples=100, test_samples=50, N=4, k=2, alpha=1):
+    parameter = [alpha]*N
 
-    test_topk = np.argsort(test_data, axis=1)[:,-k:]
-    train_topk = np.argsort(train_data, axis=1)[:,-k:]
+    train_data = np.random.dirichlet(parameter, size=train_samples)
+    test_data = np.random.dirichlet(parameter, size=test_samples)
 
-    # test_labels = test_data.argmax(axis=1)
+    # for i in range(train_samples):
+    #     print(train_data[i])
+
+    # train_topk = np.argsort(train_data, axis=1)[:,-k:]
+    # test_topk = np.argsort(test_data, axis=1)[:,-k:]
+
     # train_labels = train_data.argmax(axis=1)
-    test_labels = np.array([np.random.choice(test_topk[i]) for i in range(len(test_topk))])
-    train_labels = np.array([np.random.choice(train_topk[i]) for i in range(len(train_topk))])
+    # test_labels = test_data.argmax(axis=1)
+    # train_labels = np.array([np.random.choice(train_topk[i]) for i in range(len(train_topk))])
+    # test_labels = np.array([np.random.choice(test_topk[i]) for i in range(len(test_topk))])
+    train_labels = np.array([np.random.choice(N, p=train_data[i]) for i in range(train_samples)])
+    test_labels = np.array([np.random.choice(N, p=test_data[i]) for i in range(test_samples)])
 
     return train_data, train_labels, test_data, test_labels
 
@@ -212,15 +219,17 @@ def repeat_experiment2(NklMdcf, loss_dict, n_trials1, K=None, hidden_size = 64, 
     print("_____________________________________________________________________")
     return results
 
-def repeat_experiment3(loss_dict, n_trials1, K=5, N=10, hidden_size = 64, EPOCHS = 100,
+def repeat_experiment3(loss_dict, n_trials1, K=2, N=4, alpha=1, hidden_size = 64, EPOCHS = 100,
                      batch_size=None):
     # N,k,l,M,d,c,f=NklMdcf
     # if K == None:
     #     K=5
     # 1st dim: loss type, 2nd dim: statistic type, 3/4 dim: trial1/trial2 number
+    train_samples, test_samples = 5000, 1000
+
     results = np.zeros((len(loss_dict), 3, n_trials1))
     for i in range(n_trials1):
-        train_data, train_labels, test_data, test_labels = generate_dataset(5000, 1000, 10, K)
+        train_data, train_labels, test_data, test_labels = generate_dataset(train_samples, test_samples, N=N, k=K, alpha=alpha)
         # print(NklMdcf)
         # print(train_data.shape)
         # print(train_labels.shape)

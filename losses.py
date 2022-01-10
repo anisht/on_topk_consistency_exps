@@ -55,11 +55,11 @@ def psi6(k):
 
         # def m_loss(u, m):
         #     return (torch.topk(u, m)[0].sum() - min(m, k))/m
-        m_loss = lambda u, m: (torch.topk(u, m)[0].sum() - min(m, k))/m
+        ms = np.append(1, range(k + 1, input.shape[1] + 1))
+        m_loss = lambda u, m: (torch.topk(u, m)[0].sum() - min(m, k))/float(m)
         max_m_loss = lambda u: torch.max(torch.stack([m_loss(u, m) for m in ms]))
 
         unbatched = torch.unbind(input)
-        ms = np.append(1, range(k, input.shape[1] + 1))
         maxes = torch.stack([max_m_loss(u) for u in unbatched])
         u_y = torch.gather(input, 1, target.view(-1,1).to(torch.long)).flatten()
         losses = maxes + torch.ones_like(maxes) - u_y
@@ -69,7 +69,7 @@ def psi6(k):
 
 from torch.autograd import Function
 class psi5(Function):
-    k=5
+    k=2
     def __init__(self, k=5):
         self.k = k
     @staticmethod
