@@ -94,7 +94,8 @@ def generate_gaussians2(N=5, k=3, l=10, M=20, d=None, c=5, f=100):
 
 
 def generate_dataset(train_samples=100, test_samples=50, N=4, k=2, alpha=1):
-    parameter = [alpha]*N
+    parameter = [5, 2, 2]
+    # parameter = [alpha]*N
 
     train_data = np.random.dirichlet(parameter, size=train_samples)
     test_data = np.random.dirichlet(parameter, size=test_samples)
