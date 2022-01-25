@@ -97,8 +97,33 @@ def generate_dataset(train_samples=100, test_samples=50, N=4, k=2, alpha=1):
     parameter = [5, 2, 2]
     # parameter = [alpha]*N
 
-    train_data = np.random.dirichlet(parameter, size=train_samples)
-    test_data = np.random.dirichlet(parameter, size=test_samples)
+    # train_data = np.random.dirichlet(parameter, size=train_samples)
+    # test_data = np.random.dirichlet(parameter, size=test_samples)
+    p = 0.3
+    q = 0.5 - p
+
+    points_list = [
+        [p, .25, q, .25],
+        [p, q, .25, .25],
+        [p, .25, .25, q],
+        [.25, p, q, .25],
+        [q, p, .25, .25],
+        [.25, p, .25, q],
+        [.25, q, p, .25],
+        [q, .25, p, .25],
+        [.25, .25, p, q],
+        [.25, q, .25, p],
+        [q, .25, .25, p],
+        [.25, .25, q, p],
+    ]
+    # train_data = np.array([points_list[i] for i in np.random.choice(range(len(points_list)), size=train_samples)])
+    # test_data = np.array([points_list[i] for i in np.random.choice(range(len(points_list)), size=test_samples)])
+    train_data = np.array(points_list * train_samples)
+    test_data = np.array(points_list * test_samples)
+
+
+    # train_labels = np.array([[1, 1, 0] for i in range(train_samples)])
+    # test_labels = np.array([[1, 1, 0]for i in range(test_samples)])
 
     # for i in range(train_samples):
     #     print(train_data[i])
@@ -110,8 +135,18 @@ def generate_dataset(train_samples=100, test_samples=50, N=4, k=2, alpha=1):
     # test_labels = test_data.argmax(axis=1)
     # train_labels = np.array([np.random.choice(train_topk[i]) for i in range(len(train_topk))])
     # test_labels = np.array([np.random.choice(test_topk[i]) for i in range(len(test_topk))])
-    train_labels = np.array([np.random.choice(N, p=train_data[i]) for i in range(train_samples)])
-    test_labels = np.array([np.random.choice(N, p=test_data[i]) for i in range(test_samples)])
+    train_labels = np.array([np.random.choice(N, p=train_data[i]) for i in range(len(train_data))])
+    test_labels = np.array([np.random.choice(N, p=test_data[i]) for i in range(len(test_data))])
+    # train_labels = (train_labels + 1) % 4
+    # test_labels = (test_labels + 1) % 4
+
+    # train_point_count = sum([i[1] == 0.25 for i in train_data]) / len(train_data)
+    # test_point_count = sum([i[1] == 0.25 for i in test_data]) / len(test_data)
+    # print("train dist: ", train_point_count, "\t test dist: ", test_point_count)
+    # _, train_label_counts = np.unique(train_labels, return_counts=True)
+    # _, test_label_counts = np.unique(test_labels, return_counts=True)
+    # print("train labels: ", train_label_counts / len(train_data), "\t test labels: ", test_label_counts / len(test_data))
+
 
     return train_data, train_labels, test_data, test_labels
 
@@ -131,18 +166,20 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
                          hidden_size=64, EPOCHS=100, batch_size=None):
     n,d = train_data.shape
     M = np.max(train_labels)+1
-    net = nn.Linear(d, M)
+    net = nn.Linear(d, M, bias=False)
     # net = nn.Sequential(
     #     nn.Linear(d, 20),
     #     nn.Sigmoid(),
     #     nn.Linear(20, M)
     # )
-    optim = torch.optim.Adam(net.parameters(), 0.1)
+    optim = torch.optim.Adam(net.parameters(), .001)
     train_data = Dset(train_data, train_labels)
     if batch_size==None:
         batch_size=n
     train_dataloader = tdata.DataLoader(train_data, batch_size=batch_size, shuffle=False)
     for epoch in range(EPOCHS):
+        if epoch % (EPOCHS / 10) == 0:
+            print(epoch)
         for x,y in train_dataloader:
             s = net(x)
             loss = loss_fn(s, y)
@@ -159,7 +196,6 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
     tk_acc = 0
     argsort_s = np.argsort(test_s, axis=1)
     for i in range(k):
-
         tk_acc += sum(argsort_s[:, -i-1] == test_labels)/test_n
     loss = loss_fn(torch.Tensor(test_s), torch.LongTensor(test_labels)).item()
         
@@ -226,7 +262,7 @@ def repeat_experiment3(loss_dict, n_trials1, K=2, N=4, alpha=1, hidden_size = 64
     # if K == None:
     #     K=5
     # 1st dim: loss type, 2nd dim: statistic type, 3/4 dim: trial1/trial2 number
-    train_samples, test_samples = 5000, 1000
+    train_samples, test_samples = 200, 200
 
     results = np.zeros((len(loss_dict), 3, n_trials1))
     for i in range(n_trials1):
@@ -246,8 +282,8 @@ def repeat_experiment3(loss_dict, n_trials1, K=2, N=4, alpha=1, hidden_size = 64
                                                          loss_fn=loss_fn, batch_size=batch_size)
             results[m, :, i] = [loss, acc, topk_acc]
             print(f"Loss: {loss}, acc: {acc}, top-{K} acc: {topk_acc}")
-            # for name, param in net.named_parameters():
-            #     print(name, ": ", param)
+            for name, param in net.named_parameters():
+                print(name, ": ", param)
             print("-------------------------------------------------------------")
         print("================================================================")
     print("_____________________________________________________________________")

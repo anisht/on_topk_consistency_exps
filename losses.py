@@ -65,11 +65,14 @@ def psi6(k):
         losses = maxes + torch.ones_like(maxes) - u_y
         return losses.sum()/input.shape[0]
 
+    # print("ASDFL;KAJSDF;LAKJSDF")
+    # print(l(torch.tensor([[2, 0, 0, 0]]), torch.tensor([3])))
     return l
+# psi6(3)
 
 from torch.autograd import Function
 class psi5(Function):
-    k=2
+    k=3
     def __init__(self, k=5):
         self.k = k
     @staticmethod

@@ -8,8 +8,8 @@ from losses import *
 from utils import repeat_experiment, repeat_experiment2, repeat_experiment3
 
 
-N = 3
-k = 2
+N = 4
+k = 3
 
 loss_dict = {'ent': nn.CrossEntropyLoss(),
 			 'L1':psi1(k),
@@ -34,8 +34,8 @@ loss_dict2 = {'ent': nn.CrossEntropyLoss(),
 			  }
 
 if __name__ == '__main__':
-	EPOCHS=20
-	num_trials=5
+	EPOCHS=100
+	num_trials=1
 	# Ns = [10, 50, 100]
 	# exp_num = int(input('Choose which experiment (enter 1 or 2): '))
 	exp_num = 1
@@ -79,14 +79,14 @@ if __name__ == '__main__':
 		# 	res = exp_res[-1]
 		# 	df = pd.DataFrame(res.mean(axis=2), index=loss_dict.keys(), columns=['loss', 'acc', 'top-5'])
 		# 	print(df)
-	with open(f"alpha_plot_n{N}_k{k}_epochs{EPOCHS}.pkl", 'wb') as f:
-		pickle.dump(alpha_res, f)
-	print(alpha_res)
+	# with open(f"alpha_plot_n{N}_k{k}_epochs{EPOCHS}.pkl", 'wb') as f:
+	# 	pickle.dump(alpha_res, f)
+	# print(alpha_res)
 
-	import matplotlib.pyplot as plt
-	import seaborn as sns
-	alpha_res.T.plot.line(logx=True, xticks=alphas)
-	plt.xlabel("alpha")
-	plt.ylabel("top-k accuracy")
-	plt.show()
+	# import matplotlib.pyplot as plt
+	# import seaborn as sns
+	# alpha_res.T.plot.line(logx=True, xticks=alphas)
+	# plt.xlabel("alpha")
+	# plt.ylabel("top-k accuracy")
+	# plt.show()
 
