@@ -103,17 +103,17 @@ def generate_dataset(train_samples=100, test_samples=50, N=4, k=2, alpha=1):
     q = 0.5 - p
 
     points_list = [
-        [p, .25, q, .25],
         [p, q, .25, .25],
+        [p, .25, q, .25],
         [p, .25, .25, q],
-        [.25, p, q, .25],
         [q, p, .25, .25],
+        [.25, p, q, .25],
         [.25, p, .25, q],
-        [.25, q, p, .25],
         [q, .25, p, .25],
+        [.25, q, p, .25],
         [.25, .25, p, q],
-        [.25, q, .25, p],
         [q, .25, .25, p],
+        [.25, q, .25, p],
         [.25, .25, q, p],
     ]
     # train_data = np.array([points_list[i] for i in np.random.choice(range(len(points_list)), size=train_samples)])
@@ -140,7 +140,12 @@ def generate_dataset(train_samples=100, test_samples=50, N=4, k=2, alpha=1):
     # train_labels = (train_labels + 1) % 4
     # test_labels = (test_labels + 1) % 4
 
-    # train_point_count = sum([i[1] == 0.25 for i in train_data]) / len(train_data)
+    total = 0 
+    for i in range(len(train_data)):
+        if train_data[i][train_labels[i]] == q:
+            total += 1
+    print("q samples:  ", total / len(train_data) )
+    # train_point_count = (train_data[train_labels] == q).sum() / len(train_data)
     # test_point_count = sum([i[1] == 0.25 for i in test_data]) / len(test_data)
     # print("train dist: ", train_point_count, "\t test dist: ", test_point_count)
     # _, train_label_counts = np.unique(train_labels, return_counts=True)
@@ -167,25 +172,50 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
     n,d = train_data.shape
     M = np.max(train_labels)+1
     net = nn.Linear(d, M, bias=False)
+    # net.weight.data.copy_(torch.eye(d))
     # net = nn.Sequential(
     #     nn.Linear(d, 20),
     #     nn.Sigmoid(),
     #     nn.Linear(20, M)
     # )
-    optim = torch.optim.Adam(net.parameters(), .001)
-    train_data = Dset(train_data, train_labels)
+    optim = torch.optim.Adam(net.parameters(), 0.002)
+    train_dataset = Dset(train_data, train_labels)
     if batch_size==None:
         batch_size=n
-    train_dataloader = tdata.DataLoader(train_data, batch_size=batch_size, shuffle=False)
+    train_dataloader = tdata.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    naive_test_s = torch.Tensor(test_data).detach().numpy()
+    naive_tk_acc = 0
+    naive_argsort_s = np.argsort(naive_test_s, axis=1)
+    naive_test_n = naive_test_s.shape[0]
+    for i in range(k):
+        naive_tk_acc += sum(naive_argsort_s[:, -i-1] == test_labels)/naive_test_n
+    print("IDENTITY TOPK LOSS: ", 1 - naive_tk_acc)
+
     for epoch in range(EPOCHS):
-        if epoch % (EPOCHS / 10) == 0:
-            print(epoch)
+        if epoch % (EPOCHS / 100) == 0:
+            test_s = net(torch.Tensor(test_data)).detach().numpy()
+            testloss = loss_fn(torch.Tensor(test_s), torch.LongTensor(test_labels)).item()
+            test_n = test_s.shape[0]
+
+            tk_acc = 0
+            argsort_s = np.argsort(test_s, axis=1)
+            for i in range(k):
+                tk_acc += sum(argsort_s[:, -i-1] == test_labels)/test_n
+
+            print("TEST LOSS AT EPOCH ", epoch, ": ", testloss, "\tTOPK LOSS: ", 1 - tk_acc)
+        printbool = True
         for x,y in train_dataloader:
+            optim.zero_grad()
             s = net(x)
             loss = loss_fn(s, y)
             loss.backward()
+            # if(printbool and epoch % (EPOCHS / 10) == 0 ):
+            #     print(net.weight.grad)
+            #     printbool = False
+            #     for name, param in net.named_parameters():
+            #         print(name, ": ", param)
             optim.step()
-            optim.zero_grad()
            
     # evaluate
     test_s = net(torch.Tensor(test_data)).detach().numpy()
@@ -198,8 +228,13 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
     for i in range(k):
         tk_acc += sum(argsort_s[:, -i-1] == test_labels)/test_n
     loss = loss_fn(torch.Tensor(test_s), torch.LongTensor(test_labels)).item()
+
+    train_s = net(torch.Tensor(train_data)).detach().numpy()
+    trainloss = loss_fn(torch.Tensor(train_s), torch.LongTensor(train_labels)).item()
+    print("TRAIN LOSS: ", trainloss)
+
         
-    return net, loss, acc, tk_acc
+    return net, loss, acc, 1 - tk_acc
 
 
 def repeat_experiment(Nkldcf, loss_dict, n_trials1, K=None, hidden_size = 64, EPOCHS = 100,

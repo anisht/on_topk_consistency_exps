@@ -11,30 +11,32 @@ from utils import repeat_experiment, repeat_experiment2, repeat_experiment3
 N = 4
 k = 3
 
-loss_dict = {'ent': nn.CrossEntropyLoss(),
-			 'L1':psi1(k),
+loss_dict = {
+			 'L6':psi6(k),
 			 'L2':psi2(k),
 			 'L3':psi3(k),
 			 'L4':psi4(k),
-			 'L5':psi5(k).apply,
-			 'L6':psi6(k),
-			 'enta':trent1(k),
-			 'entb':trent2(k)
+			 'ent': nn.CrossEntropyLoss(),
+			 # 'L1':psi1(k),
+			 # 'L5':psi5(k).apply,
+			 # 'enta':trent1(k),
+			 # 'entb':trent2(k)
 			 }
 
-loss_dict2 = {'ent': nn.CrossEntropyLoss(),
-			  'L1':psi1(k),
-			  'L2':psi2(k),
-			  'L3':psi3(k),
-			  'L4':psi4(k),
-			  'L5':psi5(k).apply,
-			  'L6':psi6(k),
-			  'enta':trent1(k),
-			  'entb':trent2(k)
-			  }
+# loss_dict2 = {
+# 			  'L6':psi6(k),
+# 			  'L2':psi2(k),
+# 			  'L3':psi3(k),
+# 			  'L4':psi4(k),
+# 			  'ent': nn.CrossEntropyLoss(),
+# 			  # 'L1':psi1(k),
+# 			  # 'L5':psi5(k).apply,
+# 			  # 'enta':trent1(k),
+# 			  # 'entb':trent2(k)
+# 			  }
 
 if __name__ == '__main__':
-	EPOCHS=100
+	EPOCHS=50000
 	num_trials=1
 	# Ns = [10, 50, 100]
 	# exp_num = int(input('Choose which experiment (enter 1 or 2): '))
