@@ -93,33 +93,36 @@ def generate_gaussians2(N=5, k=3, l=10, M=20, d=None, c=5, f=100):
     return train_data, train_labels, test_data, test_labels, mean_probs
 
 
-def generate_dataset(train_samples=100, test_samples=50, N=4, k=2, alpha=1):
-    parameter = [5, 2, 2]
+def generate_dataset(train_samples=100, test_samples=50, N=6, k=3, alpha=1):
+    parameter = [1, 1, 1, 1, 1, 1]
     # parameter = [alpha]*N
 
-    # train_data = np.random.dirichlet(parameter, size=train_samples)
-    # test_data = np.random.dirichlet(parameter, size=test_samples)
-    p = 0.3
-    q = 0.5 - p
+    train_data = np.random.dirichlet(parameter, size=train_samples)
+    test_data = np.random.dirichlet(parameter, size=test_samples)
+    
 
-    points_list = [
-        [p, q, .25, .25],
-        [p, .25, q, .25],
-        [p, .25, .25, q],
-        [q, p, .25, .25],
-        [.25, p, q, .25],
-        [.25, p, .25, q],
-        [q, .25, p, .25],
-        [.25, q, p, .25],
-        [.25, .25, p, q],
-        [q, .25, .25, p],
-        [.25, q, .25, p],
-        [.25, .25, q, p],
-    ]
+    # p = 0.3
+    # q = 0.5 - p
+    # points_list = [
+    #     [p, q, .25, .25],
+    #     [p, .25, q, .25],
+    #     [p, .25, .25, q],
+    #     [q, p, .25, .25],
+    #     [.25, p, q, .25],
+    #     [.25, p, .25, q],
+    #     [q, .25, p, .25],
+    #     [.25, q, p, .25],
+    #     [.25, .25, p, q],
+    #     [q, .25, .25, p],
+    #     [.25, q, .25, p],
+    #     [.25, .25, q, p],
+    # ]
+    # train_data = np.array(points_list * train_samples)
+    # test_data = np.array(points_list * test_samples)
+
+
     # train_data = np.array([points_list[i] for i in np.random.choice(range(len(points_list)), size=train_samples)])
     # test_data = np.array([points_list[i] for i in np.random.choice(range(len(points_list)), size=test_samples)])
-    train_data = np.array(points_list * train_samples)
-    test_data = np.array(points_list * test_samples)
 
 
     # train_labels = np.array([[1, 1, 0] for i in range(train_samples)])
@@ -140,11 +143,11 @@ def generate_dataset(train_samples=100, test_samples=50, N=4, k=2, alpha=1):
     # train_labels = (train_labels + 1) % 4
     # test_labels = (test_labels + 1) % 4
 
-    total = 0 
-    for i in range(len(train_data)):
-        if train_data[i][train_labels[i]] == q:
-            total += 1
-    print("q samples:  ", total / len(train_data) )
+    # total = 0 
+    # for i in range(len(train_data)):
+    #     if train_data[i][train_labels[i]] == q:
+    #         total += 1
+    # print("q samples:  ", total / len(train_data) )
     # train_point_count = (train_data[train_labels] == q).sum() / len(train_data)
     # test_point_count = sum([i[1] == 0.25 for i in test_data]) / len(test_data)
     # print("train dist: ", train_point_count, "\t test dist: ", test_point_count)
@@ -172,13 +175,13 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
     n,d = train_data.shape
     M = np.max(train_labels)+1
     net = nn.Linear(d, M, bias=False)
-    # net.weight.data.copy_(torch.eye(d))
+    net.weight.data.copy_(torch.eye(d))
     # net = nn.Sequential(
     #     nn.Linear(d, 20),
     #     nn.Sigmoid(),
     #     nn.Linear(20, M)
     # )
-    optim = torch.optim.Adam(net.parameters(), 0.002)
+    optim = torch.optim.Adam(net.parameters(), 0.001)
     train_dataset = Dset(train_data, train_labels)
     if batch_size==None:
         batch_size=n
@@ -297,7 +300,7 @@ def repeat_experiment3(loss_dict, n_trials1, K=2, N=4, alpha=1, hidden_size = 64
     # if K == None:
     #     K=5
     # 1st dim: loss type, 2nd dim: statistic type, 3/4 dim: trial1/trial2 number
-    train_samples, test_samples = 200, 200
+    train_samples, test_samples = 10000, 10000
 
     results = np.zeros((len(loss_dict), 3, n_trials1))
     for i in range(n_trials1):

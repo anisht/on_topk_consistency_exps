@@ -50,18 +50,19 @@ def psi1(k):
 
 def psi6(k):
     def l(input, target):
-        m1, _ = torch.max(input, 1)
-        m4 = torch.sum(input, 1) / 4 + 0.25
-        u_y = torch.gather(input, 1, target.view(-1,1).to(torch.long)).flatten()
-        losses = torch.maximum(m1, m4) - u_y
-        return losses.sum()/input.shape[0]
+        # # m1, _ = torch.max(input, 1)
+        # # m4 = torch.sum(input, 1) / 4 + 0.25
+        # # u_y = torch.gather(input, 1, target.view(-1,1).to(torch.long)).flatten()
+        # # losses = torch.maximum(m1, m4) - u_y
+        # # return losses.sum()/input.shape[0]
 
 
         # # sorted, _ = torch.sort(input, descending=True)  # returns tuple with indices, which we dont need
 
         # # def m_loss(u, m):
         # #     return (torch.topk(u, m)[0].sum() - min(m, k))/m
-        # ms = np.append(1, range(k + 1, input.shape[1] + 1))
+        # ms = np.array([1,4,5,6])
+        # # ms = np.append(1, range(k + 1, input.shape[1] + 1))
         # m_loss = lambda u, m: (torch.topk(u, m)[0].sum() - min(m, k))/float(m)
         # max_m_loss = lambda u: torch.max(torch.stack([m_loss(u, m) for m in ms]))
 
@@ -70,6 +71,16 @@ def psi6(k):
         # u_y = torch.gather(input, 1, target.view(-1,1).to(torch.long)).flatten()
         # losses = maxes + torch.ones_like(maxes) - u_y
         # return losses.sum()/input.shape[0]
+
+        ms = range(k + 1, input.shape[1] + 1)
+        mlosses = [1 - (float(k)/m) + (torch.topk(input, m, dim=1)[0].sum(axis=1))/m  for m in ms] # S_m(u)/m + 1 - k/m for each input row
+        max_m_loss, _ = torch.max(torch.stack(mlosses, dim=1), dim=1) # max of m losses
+
+        m1, _ = torch.max(input, dim=1) 
+        u_y = torch.gather(input, 1, target.view(-1,1).to(torch.long)).flatten()
+        losses = torch.maximum(m1, max_m_loss) - u_y
+        return losses.sum()/input.shape[0]
+
 
 
 
