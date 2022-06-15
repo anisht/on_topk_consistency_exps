@@ -93,12 +93,27 @@ def generate_gaussians2(N=5, k=3, l=10, M=20, d=None, c=5, f=100):
     return train_data, train_labels, test_data, test_labels, mean_probs
 
 
-def generate_dataset(train_samples=100, test_samples=50, N=6, k=3, alpha=1):
-    parameter = [1, 1, 1, 1, 1, 1]
+PRINT = False
+def generate_dataset(train_samples=100, test_samples=50, N=5, k=3, alpha=1, scale=1):
+    parameter = np.array([.15, .15, .45, .25])*scale
     # parameter = [alpha]*N
 
-    train_data = np.random.dirichlet(parameter, size=train_samples)
-    test_data = np.random.dirichlet(parameter, size=test_samples)
+    # train_data = np.random.dirichlet(parameter, size=train_samples)
+    # sample each distribution many times
+    # train_data = np.repeat(np.random.dirichlet(parameter, size=int(train_samples/1000)), 1000, axis=0)
+    # distributions = {
+    #     (.15, .15, .45, .25): [.15, .15, .45, .25], 
+    #     (.15, .45, .15, .25): [.15, .45, .15, .25], 
+    #     (.45, .15, .15, .25): [.45, .15, .15, .25], 
+    #     # [.33, .33, .09, .25],
+    # }
+    # train_data = np.repeat([[.15, .15, .45, .25], [.15, .45, .15, .25], [.45, .15, .15, .25]], 1000, axis=0)
+    # test_data = np.random.dirichlet(parameter, size=test_samples)
+    # test_data = np.repeat([[.15, .15, .45, .25], [.15, .45, .15, .25], [.45, .15, .15, .25]], 1000, axis=0)
+
+    train_data = np.array([np.random.dirichlet(parameter) for i in range(train_samples)])
+    test_data = np.array([np.random.dirichlet(parameter) for i in range(test_samples)])
+
     
 
     # p = 0.3
@@ -175,13 +190,14 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
     n,d = train_data.shape
     M = np.max(train_labels)+1
     net = nn.Linear(d, M, bias=False)
-    net.weight.data.copy_(torch.eye(d))
+    eta = 0.01
+    # net.weight.data.copy_(torch.eye(d))
     # net = nn.Sequential(
     #     nn.Linear(d, 20),
     #     nn.Sigmoid(),
     #     nn.Linear(20, M)
     # )
-    optim = torch.optim.Adam(net.parameters(), 0.001)
+    optim = torch.optim.Adam(net.parameters(), eta)
     train_dataset = Dset(train_data, train_labels)
     if batch_size==None:
         batch_size=n
@@ -193,10 +209,10 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
     naive_test_n = naive_test_s.shape[0]
     for i in range(k):
         naive_tk_acc += sum(naive_argsort_s[:, -i-1] == test_labels)/naive_test_n
-    print("IDENTITY TOPK LOSS: ", 1 - naive_tk_acc)
+    if PRINT: print("IDENTITY TOPK LOSS: ", 1 - naive_tk_acc)
 
     for epoch in range(EPOCHS):
-        if epoch % (EPOCHS / 100) == 0:
+        if epoch % (EPOCHS / 10) == 0:
             test_s = net(torch.Tensor(test_data)).detach().numpy()
             testloss = loss_fn(torch.Tensor(test_s), torch.LongTensor(test_labels)).item()
             test_n = test_s.shape[0]
@@ -206,18 +222,13 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
             for i in range(k):
                 tk_acc += sum(argsort_s[:, -i-1] == test_labels)/test_n
 
-            print("TEST LOSS AT EPOCH ", epoch, ": ", testloss, "\tTOPK LOSS: ", 1 - tk_acc)
-        printbool = True
+            if PRINT:
+                print("TEST LOSS AT EPOCH ", epoch, ": ", testloss, "\tTOPK LOSS: ", 1 - tk_acc)
         for x,y in train_dataloader:
             optim.zero_grad()
             s = net(x)
             loss = loss_fn(s, y)
             loss.backward()
-            # if(printbool and epoch % (EPOCHS / 10) == 0 ):
-            #     print(net.weight.grad)
-            #     printbool = False
-            #     for name, param in net.named_parameters():
-            #         print(name, ": ", param)
             optim.step()
            
     # evaluate
@@ -234,7 +245,7 @@ def train_KM_and_evaluate(train_data, train_labels, test_data, test_labels, k, l
 
     train_s = net(torch.Tensor(train_data)).detach().numpy()
     trainloss = loss_fn(torch.Tensor(train_s), torch.LongTensor(train_labels)).item()
-    print("TRAIN LOSS: ", trainloss)
+    if PRINT: print("TRAIN LOSS: ", trainloss)
 
         
     return net, loss, acc, 1 - tk_acc
@@ -295,16 +306,16 @@ def repeat_experiment2(NklMdcf, loss_dict, n_trials1, K=None, hidden_size = 64, 
     return results
 
 def repeat_experiment3(loss_dict, n_trials1, K=2, N=4, alpha=1, hidden_size = 64, EPOCHS = 100,
-                     batch_size=None):
+                     batch_size=None, scale=1):
     # N,k,l,M,d,c,f=NklMdcf
     # if K == None:
     #     K=5
     # 1st dim: loss type, 2nd dim: statistic type, 3/4 dim: trial1/trial2 number
-    train_samples, test_samples = 10000, 10000
+    train_samples, test_samples = 10000, 1000
 
-    results = np.zeros((len(loss_dict), 3, n_trials1))
+    result = np.zeros((len(loss_dict), 3, n_trials1))
     for i in range(n_trials1):
-        train_data, train_labels, test_data, test_labels = generate_dataset(train_samples, test_samples, N=N, k=K, alpha=alpha)
+        train_data, train_labels, test_data, test_labels = generate_dataset(train_samples, test_samples, N=N, k=K, alpha=alpha, scale=scale)
         # print(NklMdcf)
         # print(train_data.shape)
         # print(train_labels.shape)
@@ -314,15 +325,16 @@ def repeat_experiment3(loss_dict, n_trials1, K=2, N=4, alpha=1, hidden_size = 64
         train_data, train_labels = train_data[perm], train_labels[perm]
 
         for m, (loss_name, loss_fn) in enumerate(loss_dict.items()):
-            print("loss={}, i={}, k={}".format(loss_name, i, K))
+            if PRINT: print("loss={}, i={}, scale={}".format(loss_name, i, scale))
             net, loss, acc, topk_acc = train_KM_and_evaluate(train_data, train_labels, test_data, 
                                                          test_labels, K, hidden_size = hidden_size, EPOCHS=EPOCHS, 
                                                          loss_fn=loss_fn, batch_size=batch_size)
-            results[m, :, i] = [loss, acc, topk_acc]
-            print(f"Loss: {loss}, acc: {acc}, top-{K} acc: {topk_acc}")
-            for name, param in net.named_parameters():
-                print(name, ": ", param)
-            print("-------------------------------------------------------------")
-        print("================================================================")
+            result[m, :, i] = [loss, acc, topk_acc]
+            if PRINT:
+                print(f"Loss: {loss}, acc: {acc}, top-{K} acc: {topk_acc}")
+                for name, param in net.named_parameters():
+                    print(name, ": ", param)
+                print("-------------------------------------------------------------")
+        if PRINT: print("================================================================")
     print("_____________________________________________________________________")
-    return results
+    return result
